@@ -1,0 +1,106 @@
+---
+title: "Out-of Sample ACE_Metric for `r params$name`"
+output: pdf_document
+# date: '2022-06-03'
+params:
+  name: ELRETSALTOTAL
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data loading
+
+```{r}
+library(readr); library(readxl)
+
+output_file = paste0('outData_All_pred_', params$name, '.xlsx')
+
+# Getting predictions for ACE calculation 
+outData_All_pred <- read_excel(output_file)
+
+# Same name for the calculations 
+df <- outData_All_pred
+colnames(df) <- colnames(outData_All_pred)
+
+```
+
+## Playing with the data to PICP 
+
+```{r}
+library(dplyr); library(tidyr); library(magrittr)
+```
+
+
+```{r}
+# Dplyr remove a column by name:
+
+df_w_true <- df %>% 
+  select(-c(4,8,12))
+
+#true <- df %>% select(c(4))
+
+colnames(df_w_true)[dim(df_w_true)[2]] <- c("True")
+#head(true)
+```
+
+```{r}
+# For alpha = 0.1
+
+observ <- df_w_true$True
+n <- (dim(df_w_true)[2]-1) 
+ci <- rep(0, n)
+ci
+
+for (j in 1:(dim(df_w_true)[2]-1)) {
+  ci[j] <- df_w_true %>% 
+  mutate(ci = ifelse(.[[j]] >= observ, 0, 1)) %>% 
+  select(ci) %>% sum()
+  ci
+}
+
+#ci <- df_w_true %>% 
+#  mutate(ci = ifelse(DVQR_01 >= observ, 0, 1)) %>% 
+#  select(ci) %>% sum()
+#ci
+
+PICP <- ci/dim(df_w_true)[1]
+PICP
+```
+
+
+```{r}
+# ORDER FOR MODELS: DVQR - NPDVQR - LQR
+# For 0.1 case
+ACE_01 <- PICP[c(1,2,3)] - 0.1
+ACE_01
+
+# For 0.25 case
+ACE_025 <- PICP[c(4,5,6)] - 0.25
+ACE_025
+
+# For 0.5 case
+ACE_05 <- PICP[c(7,8,9)] - 0.5
+ACE_05
+
+# For 0.9 case
+ACE_09 <- PICP[c(10,11,12)] - 0.9
+ACE_09
+```
+
+```{r}
+# combine all of them 
+
+ACE_All <- cbind(ACE_01, ACE_025, ACE_05, ACE_09)
+
+rownames(ACE_All) <- c("DVQR", "NPDVQR", "LQR")
+library(pander)
+pander(ACE_All)
+
+```
+
+
+
+
+
